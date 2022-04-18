@@ -1,0 +1,133 @@
+*=================MANIPUACIÓN DE DATOS, INDICADORES DE EMPLEO===================
+
+
+use "sumaria-2020.dta", clear
+
+* Crear ubigeo
+gen ubigeo1=substr(ubigeo,1,2)
+g departamento=real(ubigeo1)
+drop ubigeo1
+
+label define dpto ///
+1 "Amazonas" ///
+2 "Ancash" ///
+3 "Apurímac" ///
+4 "Arequipa" ///
+5 "Ayacucho" ///
+6 "Cajamarca" ///
+7 "Callao" ///
+8 "Cusco" ///
+9 "Huancavelica" ///
+10 "Huánuco" ///
+11 "Ica" ///
+12 "Junín" ///
+13 "La Libertad" ///
+14 "Lambayeque" ///
+15 "Lima" ///
+16 "Loreto" ///
+17 "Madre de Dios" ///
+18 "Moquegua" ///
+19 "Pasco" ///
+20 "Piura" ///
+21 "Puno" ///
+22 "San Martín" ///
+23 "Tacna" ///
+24 "Tumbes" ///
+25 "Ucayali"
+label values departamento dpto
+
+*inghog2d//ingreso neto total anual
+d inghog2d
+rename inghog2d ingneto
+
+*gráfico
+graph pie ingneto [aw=factor07], over(departamento)
+
+* Ingreso y Gasto per capita mensual
+gen ypc= inghog2d/(12*mieperho)
+gen gpc= gashog2d/(12*mieperho)
+
+* Gráfico Circular (Pie Plot)
+*------------------------------
+graph pie ypc [aw=factor07], over(departamento)
+
+graph pie ypc [aw=factor07], over(dominio) ///
+	plabel(_all percent, size(vsmall)) graphregion(color(white)) ///
+	legend(rows(5) region(lcolor(white)))  ///
+	title("Ingreso per-cápita por dominio 2018") 
+graph export "$graphs/pie_plot.png", as(png) replace 
+
+* Barra vertical
+graph bar ypc [aw=facpob07], ///
+		over(departamento, label(angle(90) labsize(vsmall))) yline(`mean_ypc') ///
+		ytitle("Ingreso per-cápita por departamento 2018") ///
+		graphregion(color(white)) ylabel(,nogrid) 
+graph export "$graphs/bar_plot.png", as(png) replace 
+
+
+* Generamos una variable para identificar pobres y no pobres de manera genérica
+recode pobreza (1/2=1 "Pobre") (3=0 "No Pobre"), gen(poverty) 
+label var poverty "Pobreza"
+
+save "$out/bg.dta", replace
+
+*LIMPIEZA PARA ECUACIÓN DE MINCER***
+
+*EDUCACIÓN
+use "enaho01a-2020-300.dta",clear
+
+* Nivel Educativo
+label list p301a
+recode p301a (1/2=0 "Sin nivel") (3/4=1 "Primaria") (5/6=2 "Secundaria") (7/8=3 "Superior no universitaria") (9/10=4 "Superior Universitaria") (11=5 "Maestria/Doctorado") (12=6 "Basica Especial"), gen(nivel_educ)
+label var nivel_edu "Nivel Educativo"
+
+* Grupos de Edades
+tab p208a
+recode p208a (14/17=1 "Menores de edad") (18/25=2 "Joven") (26/59=3 "Adulto") (60/99=4 "Adulto mayor"), gen(grupo_edades)
+label var grupo_edades "Grupo Etarios"
+
+*Empleo
+*************************
+use "enaho01a-2020-500.dta",clear
+
+*P501
+d p501
+* Solo los que respondieron a si tuvo trabajo o no
+drop if p501==.
+/* Ingreso proveniente del trabajo
+i524a1  Ingreso total trimestral (Imputado, deflactado, Anualizado)
+d529t   Pago en especie dependiente (Deflactado, Anualizado)
+i530a   Ganancia (ocupación principal independiente) (Imputado, deflactado, Anualizado)
+d536    Valor de los productos para su consumo (Deflactado, Anualizado)
+i538a1  Ingreso total (Imputado, deflactado, Anualizado)
+d540t   Pago en especie (dependiente) (Deflactado, Anualizado)
+i541a   Ganancia (ocupación secundaria independiente) (Imputado, deflactado, Anualizado)
+d543    Valor de los productos utilizados para su consumo (Deflactado, Anualizado)
+d544t   Ingreso extraordinario (Deflactado, Anualizado)
+*/
+
+* Mujer
+recode p207 (1=0 "Hombre") (2=1 "Mujer"), gen(sexo)
+
+* Generamos la serie de ingreso total mensual 
+egen ing_total = rowtotal(i524a1 d529t i530a d536 i538a1 d540t i541a d543 d544t) 
+gen ing_mensual=ing_total/12
+
+
+g deso=(ocu500>=2 & ocu500<=3)
+
+collapse (mean) deso [iw=fac500a], by(sexo)
+replace deso=1 if deso>1
+
+*horas de trabajo
+br i513t
+br i518
+
+*Ingresos 
+egen ingresos=rowtotal(i524e1 i530a i538e1 i541a)
+egen horas = rowtotal(i513t i518)
+gen salario=ingresos/(horas*48) //salario por hora
+replace salario=. if salario ==0
+g salmensual =salario*192 //salario mensuales
+
+saveold "$.dta",replace
