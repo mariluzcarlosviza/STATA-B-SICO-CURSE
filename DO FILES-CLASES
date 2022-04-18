@@ -1,0 +1,62 @@
+*=====================================1ER DO FILE===============================
+*Hacer comentarios en el Do file
+*Guardar y abrir un Do file
+*==========COMANDOS BÁSICOS====================================================
+*CONTROL + D ES PARA CORRER CÓDIGOS
+*CONTROL+ O
+*===otra forma de hacer comnetarios por rango
+/*
+cd "$a2019"
+*/
+
+help
+*1ERO ABRIMOS UNA BASE DE DATOS
+sysuse auto, clear
+clear all //para borrar todo anterior (base de datos), limpiar la memoria
+
+br //para ver la base de datos
+describe
+d //para ver todas las variables de las bases de datos
+describe price weight // ver las variables específicas
+
+*======================CLASE 2 MANEJO DE BASE DE DATOS=========================
+*Cargando bases de datos
+* limpiando memoria, uso recomendable
+clear all
+* fijando un directorio de trabajo, una forma simple
+cd "C:\Users\Lenovo\Desktop\STATA BAS-WINE\DATOS"
+* abriendo una base de datos
+use "enaho01a-2020-300.dta", clear
+* Importando bases de datos de excel
+import excel "pwt80.xlsx", sheet("Data") firstrow clear
+*===========ORGANIZACIÓN DE PROYECTOS===========================================
+clear all 
+set more off
+global main "C:\Users\Lenovo\Desktop\STATA BAS-WINE"
+global dta   "$main/DATOS"
+global out  "$main/OUTPUTS"
+
+use "sumaria-2020.dta", clear
+*===========================EXPLORACIÓN Y MANIPUACIÓN DE VARIABLES==============
+*lookfor
+lookfor electricidad
+codebook p1121
+*BROWSE
+*DESCRIBE
+*COUNT
+
+sum pobreza
+tab pobreza
+
+
+*RECODE
+br p207
+
+*SUMAS
+*ORDER
+*DROP
+*LABEL LIST
+*KEEP 
+keep if pobreza==1 &
+*REPLACE
+*GENERATE
